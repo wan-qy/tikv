@@ -99,6 +99,7 @@ pub struct MvccPropertiesCollector {
     props: MvccProperties,
     last_row: Vec<u8>,
     row_versions: u64,
+    size_handle: IndexHandle,
 }
 
 impl MvccPropertiesCollector {
@@ -107,6 +108,7 @@ impl MvccPropertiesCollector {
             props: MvccProperties::new(),
             last_row: Vec::new(),
             row_versions: 0,
+            size_handle: IndexHandle::default(),
         }
     }
 }
@@ -348,7 +350,7 @@ mod tests {
     use raftstore::store::keys;
 
     #[test]
-    fn test_mvcc_properties_collector() {
+    fn test_mvcc_properties() {
         let cases = [("ab", 2, WriteType::Put, DBEntryType::Put),
                      ("ab", 1, WriteType::Delete, DBEntryType::Put),
                      ("ab", 1, WriteType::Delete, DBEntryType::Delete),
