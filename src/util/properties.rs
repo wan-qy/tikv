@@ -15,6 +15,7 @@ use std::cmp;
 use std::collections::{HashMap, BTreeMap};
 use std::collections::Bound::{Included, Unbounded};
 use std::u64;
+use std::io::Read;
 
 use storage::mvcc::{Write, WriteType};
 use storage::types;
