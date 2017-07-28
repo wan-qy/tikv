@@ -31,6 +31,9 @@ const PROP_NUM_PUTS: &'static str = "tikv.num_puts";
 const PROP_NUM_VERSIONS: &'static str = "tikv.num_versions";
 const PROP_MAX_ROW_VERSIONS: &'static str = "tikv.max_row_versions";
 const PROP_NUM_ERRORS: &'static str = "tikv.num_errors";
+const PROP_TOTAL_SIZE: &'static str = "tikv.total_size";
+const PROP_SIZE_INDEX: &'static str = "tikv.size_index";
+const PROP_SIZE_INDEX_DISTANCE: u64 = 4 * 1024 * 1024;
 
 #[derive(Clone, Debug, Default)]
 pub struct MvccProperties {
@@ -277,6 +280,18 @@ impl UserProperties {
     pub fn encode_u64(&mut self, name: &str, value: u64) {
         let mut buf = Vec::with_capacity(8);
         buf.encode_u64(value).unwrap();
+        self.encode(name, buf);
+    }
+
+    // Format: | klen | k | v.size | v.offset |
+    pub fn encode_handles(&mut self, name: &str, handles: &BTreeMap<Vec<u8>, IndexHandle>) {
+        let mut buf = Vec::with_capacity(1024);
+        for (k, v) in handles {
+            buf.encode_u64(k.len() as u64).unwrap();
+            buf.extend(k);
+            buf.encode_u64(v.size).unwrap();
+            buf.encode_u64(v.offset).unwrap();
+        }
         self.encode(name, buf);
     }
 }
