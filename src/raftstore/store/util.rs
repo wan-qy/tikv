@@ -17,6 +17,11 @@ use kvproto::metapb;
 use kvproto::eraftpb::{self, ConfChangeType, MessageType};
 use kvproto::raft_serverpb::RaftMessage;
 use raftstore::{Result, Error};
+use raftstore::store::keys;
+use rocksdb::{DB, Range, TablePropertiesCollection};
+use storage::LARGE_CFS;
+use util::properties::SizeProperties;
+use util::rocksdb::get_cf_handle;
 
 use super::peer_storage;
 
@@ -87,6 +92,42 @@ pub fn conf_change_type_str(conf_type: &eraftpb::ConfChangeType) -> &'static str
 pub fn is_epoch_stale(epoch: &metapb::RegionEpoch, check_epoch: &metapb::RegionEpoch) -> bool {
     epoch.get_version() < check_epoch.get_version() ||
     epoch.get_conf_ver() < check_epoch.get_conf_ver()
+}
+
+pub fn get_region_properties_cf(db: &DB,
+                                cfname: &str,
+                                region: &metapb::Region)
+                                -> Result<TablePropertiesCollection> {
+    let cf = try!(get_cf_handle(db, cfname));
+    let start = keys::enc_start_key(region);
+    let end = keys::enc_end_key(region);
+    let range = Range::new(&start, &end);
+    db.get_properties_of_tables_in_range(cf, &[range]).map_err(|e| e.into())
+}
+
+pub fn get_region_approximate_size_cf(db: &DB,
+                                      cfname: &str,
+                                      region: &metapb::Region)
+                                      -> Result<u64> {
+    let cf = try!(get_cf_handle(db, cfname));
+    let start = keys::enc_start_key(region);
+    let end = keys::enc_end_key(region);
+    let range = Range::new(&start, &end);
+    let (_, mut size) = db.get_approximate_memtable_stats_cf(cf, &range);
+    let collection = try!(db.get_properties_of_tables_in_range(cf, &[range]));
+    for (_, v) in &*collection {
+        let props = try!(SizeProperties::decode(v.user_collected_properties()));
+        size += props.get_approximate_size_in_range(&start, &end);
+    }
+    Ok(size)
+}
+
+pub fn get_region_approximate_size(db: &DB, region: &metapb::Region) -> Result<u64> {
+    let mut size = 0;
+    for cfname in LARGE_CFS {
+        size += try!(get_region_approximate_size_cf(db, cfname, region))
+    }
+    Ok(size)
 }
 
 #[cfg(test)]

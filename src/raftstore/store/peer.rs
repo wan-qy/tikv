@@ -1435,7 +1435,12 @@ impl Peer {
         None
     }
 
+    pub fn approximate_size(&self) -> Result<u64> {
+        util::get_region_approximate_size(&self.engine(), self.region())
+    }
+
     pub fn heartbeat_pd(&self, worker: &FutureWorker<PdTask>) {
+        // TODO: report approximate region size.
         let task = PdTask::Heartbeat {
             region: self.region().clone(),
             peer: self.peer.clone(),

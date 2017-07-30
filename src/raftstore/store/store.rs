@@ -1481,6 +1481,7 @@ impl<T: Transport, C: PdClient> Store<T, C> {
                 continue;
             }
 
+            // TODO: Should we remove the `size_diff_hint`?
             if peer.size_diff_hint < self.cfg.region_check_size_diff {
                 continue;
             }
@@ -1488,6 +1489,17 @@ impl<T: Transport, C: PdClient> Store<T, C> {
                   peer.tag,
                   peer.size_diff_hint,
                   self.cfg.region_check_size_diff);
+
+            if let Ok(size) = peer.approximate_size() {
+                if size < self.cfg.region_max_size {
+                    continue;
+                }
+                info!("{} region's approximate size {} >= {}, need to check whether should split",
+                      peer.tag,
+                      size,
+                      self.cfg.region_max_size);
+            }
+
             let task = SplitCheckTask::new(peer.region());
             if let Err(e) = self.split_check_worker.schedule(task) {
                 error!("{} failed to schedule split check: {}", self.tag, e);
