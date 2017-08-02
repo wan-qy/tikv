@@ -12,7 +12,6 @@
 // limitations under the License.
 
 use std::cmp;
-use std::collections::Bound::{Included, Unbounded};
 use std::collections::{HashMap, BTreeMap};
 use std::collections::Bound::{Included, Unbounded};
 use std::u64;
@@ -247,14 +246,6 @@ impl TablePropertiesCollector for SizePropertiesCollector {
         }
         self.last_key.clear();
         self.last_key.extend_from_slice(key);
-
-        let size = key.len() + value.len();
-        self.index_handle.size += size as u64;
-        self.index_handle.offset += size as u64;
-        if self.index_handle.size >= PROP_SIZE_INDEX_DISTANCE {
-            self.props.index_handles.insert(key.to_owned(), self.index_handle.clone());
-            self.index_handle.size = 0;
-        }
     }
 
     fn finish(&mut self) -> HashMap<Vec<u8>, Vec<u8>> {

@@ -1440,7 +1440,6 @@ impl Peer {
     }
 
     pub fn heartbeat_pd(&self, worker: &FutureWorker<PdTask>) {
-        // TODO: report approximate region size.
         let task = PdTask::Heartbeat {
             region: self.region().clone(),
             peer: self.peer.clone(),
@@ -1448,6 +1447,7 @@ impl Peer {
             pending_peers: self.collect_pending_peers(),
             written_bytes: self.peer_stat.last_written_bytes,
             written_keys: self.peer_stat.last_written_keys,
+            approximate_size: self.approximate_size().unwrap_or(0),
         };
         if let Err(e) = worker.schedule(task) {
             error!("{} failed to notify pd: {}", self.tag, e);
